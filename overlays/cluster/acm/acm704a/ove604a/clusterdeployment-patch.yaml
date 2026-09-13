@@ -3,13 +3,22 @@ kind: ClusterDeployment
 metadata:
   name: ove604a
   namespace: ove604a
+
 spec:
   baseDomain: walelab.smoad.net
   clusterName: ove604a
+
   clusterInstallRef:
     group: extensions.hive.openshift.io
     kind: AgentClusterInstall
     name: ove604a
     version: v1beta1
+
+  platform:
+    agentBareMetal:
+      agentSelector:
+        matchLabels:
+          cluster-name: ove604a
+
   pullSecretRef:
     name: pull-secret
