@@ -2,9 +2,15 @@ apiVersion: kustomize.config.k8s.io/v1beta1
 kind: Kustomization
 
 
+# ============================================================
+# RESOURCES
+# ============================================================
+
 resources:
   - ../../../../../base
   - namespace.yaml
+
+  # NMStateConfigs are cluster-specific
   - nmstate/master-0.yaml
   - nmstate/master-1.yaml
   - nmstate/master-2.yaml
@@ -12,9 +18,20 @@ resources:
   - nmstate/worker-1.yaml
   - nmstate/worker-2.yaml
 
-# Normal YAML manifest patches. No JSON6902/op: replace patches.
+
+# ============================================================
+# PATCHES
+#
+# Normal YAML manifest patches.
+# No JSON6902 / op: replace patches.
+# ============================================================
+
 patches:
+
+  # ----------------------------------------------------------
   # Cluster resources
+  # ----------------------------------------------------------
+
   - target:
       kind: AgentClusterInstall
       name: cluster
@@ -40,7 +57,11 @@ patches:
       name: cluster
     path: klusterletaddonconfig-patch.yaml
 
-  # Hub namespace-scoped resources that do not otherwise need cluster-specific data
+
+  # ----------------------------------------------------------
+  # Hub provisioning Vault resources
+  # ----------------------------------------------------------
+
   - target:
       kind: ServiceAccount
       name: provisioning-vault
@@ -52,9 +73,39 @@ patches:
     path: provisioning-vault-connection-patch.yaml
 
   - target:
+      kind: VaultAuth
+      name: provisioning-vault-auth
+    path: provisioning-vault-auth-patch.yaml
+
+  - target:
+      kind: VaultStaticSecret
+      name: pull-secret
+    path: pull-secret-vault-patch.yaml
+
+  - target:
+      kind: VaultStaticSecret
+      name: bmc-credentials
+    path: bmc-vault-patch.yaml
+
+  - target:
+      kind: VaultStaticSecret
+      name: vault-bootstrap-credentials
+    path: vault-bootstrap-secret-patch.yaml
+
+
+  # ----------------------------------------------------------
+  # Day-2 extra manifests
+  # ----------------------------------------------------------
+
+  - target:
       kind: ConfigMap
       name: day2-bootstrap
     path: day2-bootstrap-configmap-patch.yaml
+
+
+  # ----------------------------------------------------------
+  # Hub Vault bootstrap
+  # ----------------------------------------------------------
 
   - target:
       kind: ServiceAccount
@@ -76,33 +127,16 @@ patches:
       name: vault-bootstrap-script
     path: vault-hub-configmap-patch.yaml
 
-  # Hub Vault provisioning
-  - target:
-      kind: VaultAuth
-      name: provisioning-vault-auth
-    path: provisioning-vault-auth-patch.yaml
-
-  - target:
-      kind: VaultStaticSecret
-      name: pull-secret
-    path: pull-secret-vault-patch.yaml
-
-  - target:
-      kind: VaultStaticSecret
-      name: bmc-credentials
-    path: bmc-vault-patch.yaml
-
-  - target:
-      kind: VaultStaticSecret
-      name: vault-bootstrap-credentials
-    path: vault-bootstrap-secret-patch.yaml
-
   - target:
       kind: Job
       name: vault-bootstrap
     path: vault-hub-job-patch.yaml
 
+
+  # ----------------------------------------------------------
   # BareMetalHosts
+  # ----------------------------------------------------------
+
   - target:
       kind: BareMetalHost
       name: master-0
@@ -133,121 +167,39 @@ patches:
       name: worker-2
     path: worker-2-patch.yaml
 
-# OpenShift 4.20 oc embeds Kustomize 5.6.x. In that version, a YAML patch
-# selected with target does not rename metadata.name. Replacements below do
-# only the name substitutions while the patch files remain normal manifests.
-replacements:
-  # All cluster identity objects use the overlay Namespace name: ove604a.
-  - source:
-      kind: Namespace
-      name: ove604a
-      fieldPath: metadata.name
-    targets:
-      - select:
-          kind: AgentClusterInstall
-          name: cluster
-        fieldPaths:
-          - metadata.name
-      - select:
-          kind: ClusterDeployment
-          name: cluster
-        fieldPaths:
-          - metadata.name
-      - select:
-          kind: InfraEnv
-          name: cluster
-        fieldPaths:
-          - metadata.name
-      - select:
-          kind: ManagedCluster
-          name: cluster
-        fieldPaths:
-          - metadata.name
-      - select:
-          kind: KlusterletAddonConfig
-          name: cluster
-        fieldPaths:
-          - metadata.name
 
-  # Each BMH patch already sets the desired hostname annotation. Reuse that
-  # value as the Kubernetes object name so there is no second name variable.
-  - source:
-      kind: BareMetalHost
-      name: master-0
-      fieldPath: metadata.annotations.[bmac.agent-install.openshift.io/hostname]
-    targets:
-      - select:
-          kind: BareMetalHost
-          name: master-0
-        fieldPaths:
-          - metadata.name
-
-  - source:
-      kind: BareMetalHost
-      name: master-1
-      fieldPath: metadata.annotations.[bmac.agent-install.openshift.io/hostname]
-    targets:
-      - select:
-          kind: BareMetalHost
-          name: master-1
-        fieldPaths:
-          - metadata.name
-
-  - source:
-      kind: BareMetalHost
-      name: master-2
-      fieldPath: metadata.annotations.[bmac.agent-install.openshift.io/hostname]
-    targets:
-      - select:
-          kind: BareMetalHost
-          name: master-2
-        fieldPaths:
-          - metadata.name
-
-  - source:
-      kind: BareMetalHost
-      name: worker-0
-      fieldPath: metadata.annotations.[bmac.agent-install.openshift.io/hostname]
-    targets:
-      - select:
-          kind: BareMetalHost
-          name: worker-0
-        fieldPaths:
-          - metadata.name
-
-  - source:
-      kind: BareMetalHost
-      name: worker-1
-      fieldPath: metadata.annotations.[bmac.agent-install.openshift.io/hostname]
-    targets:
-      - select:
-          kind: BareMetalHost
-          name: worker-1
-        fieldPaths:
-          - metadata.name
-
-  - source:
-      kind: BareMetalHost
-      name: worker-2
-      fieldPath: metadata.annotations.[bmac.agent-install.openshift.io/hostname]
-    targets:
-      - select:
-          kind: BareMetalHost
-          name: worker-2
-        fieldPaths:
-          - metadata.name
+# ============================================================
+# REPLACEMENTS
+#
+# IMPORTANT:
+# There must be ONLY ONE replacements: section.
+#
+# Order:
+#   1. cluster namespace -> ove604a
+#   2. cluster object names -> ove604a
+#   3. BareMetalHost names -> hostnames
+# ============================================================
 
 replacements:
 
-  # =========================================================
-  # Replace base namespace "cluster" with "ove604a"
-  # =========================================================
+  # ==========================================================
+  # 1. NAMESPACE
+  #
+  # Replace the generic base namespace "cluster"
+  # with the overlay namespace "ove604a".
+  # ==========================================================
+
   - source:
       kind: Namespace
       name: ove604a
       fieldPath: metadata.name
 
     targets:
+
+      # ------------------------------------------------------
+      # Assisted Installer / Hive
+      # ------------------------------------------------------
+
       - select:
           kind: AgentClusterInstall
           name: cluster
@@ -271,6 +223,11 @@ replacements:
           name: cluster
         fieldPaths:
           - metadata.namespace
+
+
+      # ------------------------------------------------------
+      # Hub provisioning Vault resources
+      # ------------------------------------------------------
 
       - select:
           kind: ServiceAccount
@@ -308,6 +265,24 @@ replacements:
         fieldPaths:
           - metadata.namespace
 
+
+      # ------------------------------------------------------
+      # Day-2 bootstrap ConfigMap
+      # ------------------------------------------------------
+
+      - select:
+          kind: ConfigMap
+          name: day2-bootstrap
+        fieldPaths:
+          - metadata.namespace
+        options:
+          create: true
+
+
+      # ------------------------------------------------------
+      # Hub Vault bootstrap resources
+      # ------------------------------------------------------
+
       - select:
           kind: ServiceAccount
           name: vault-bootstrap
@@ -325,6 +300,8 @@ replacements:
           name: vault-bootstrap
         fieldPaths:
           - metadata.namespace
+
+          # RoleBinding subject must also point to ove604a
           - subjects.0.namespace
 
       - select:
@@ -338,6 +315,11 @@ replacements:
           name: vault-bootstrap
         fieldPaths:
           - metadata.namespace
+
+
+      # ------------------------------------------------------
+      # BareMetalHosts
+      # ------------------------------------------------------
 
       - select:
           kind: BareMetalHost
@@ -375,20 +357,139 @@ replacements:
         fieldPaths:
           - metadata.namespace
 
-  # ---------------------------------------------------------
-  # KEEP YOUR EXISTING NAME REPLACEMENTS BELOW THIS
-  # ---------------------------------------------------------
+
+  # ==========================================================
+  # 2. CLUSTER RESOURCE NAMES
+  #
+  # Rename generic base resource name "cluster"
+  # to the actual cluster name "ove604a".
+  #
+  # ManagedCluster is cluster-scoped, so only its name changes.
+  # ==========================================================
+
   - source:
       kind: Namespace
       name: ove604a
       fieldPath: metadata.name
+
     targets:
+
       - select:
           kind: AgentClusterInstall
           name: cluster
         fieldPaths:
           - metadata.name
 
-      # ... existing entries continue
+      - select:
+          kind: ClusterDeployment
+          name: cluster
+        fieldPaths:
+          - metadata.name
+
+      - select:
+          kind: InfraEnv
+          name: cluster
+        fieldPaths:
+          - metadata.name
+
+      - select:
+          kind: ManagedCluster
+          name: cluster
+        fieldPaths:
+          - metadata.name
+
+      - select:
+          kind: KlusterletAddonConfig
+          name: cluster
+        fieldPaths:
+          - metadata.name
 
 
+  # ==========================================================
+  # 3. BAREMETALHOST NAMES
+  #
+  # Each BareMetalHost patch contains:
+  #
+  # metadata:
+  #   annotations:
+  #     bmac.agent-install.openshift.io/hostname: ove604m1
+  #
+  # Reuse that value as metadata.name.
+  # ==========================================================
+
+  - source:
+      kind: BareMetalHost
+      name: master-0
+      fieldPath: metadata.annotations.[bmac.agent-install.openshift.io/hostname]
+
+    targets:
+      - select:
+          kind: BareMetalHost
+          name: master-0
+        fieldPaths:
+          - metadata.name
+
+
+  - source:
+      kind: BareMetalHost
+      name: master-1
+      fieldPath: metadata.annotations.[bmac.agent-install.openshift.io/hostname]
+
+    targets:
+      - select:
+          kind: BareMetalHost
+          name: master-1
+        fieldPaths:
+          - metadata.name
+
+
+  - source:
+      kind: BareMetalHost
+      name: master-2
+      fieldPath: metadata.annotations.[bmac.agent-install.openshift.io/hostname]
+
+    targets:
+      - select:
+          kind: BareMetalHost
+          name: master-2
+        fieldPaths:
+          - metadata.name
+
+
+  - source:
+      kind: BareMetalHost
+      name: worker-0
+      fieldPath: metadata.annotations.[bmac.agent-install.openshift.io/hostname]
+
+    targets:
+      - select:
+          kind: BareMetalHost
+          name: worker-0
+        fieldPaths:
+          - metadata.name
+
+
+  - source:
+      kind: BareMetalHost
+      name: worker-1
+      fieldPath: metadata.annotations.[bmac.agent-install.openshift.io/hostname]
+
+    targets:
+      - select:
+          kind: BareMetalHost
+          name: worker-1
+        fieldPaths:
+          - metadata.name
+
+
+  - source:
+      kind: BareMetalHost
+      name: worker-2
+      fieldPath: metadata.annotations.[bmac.agent-install.openshift.io/hostname]
+
+    targets:
+      - select:
+          kind: BareMetalHost
+          name: worker-2
+        fieldPaths:
+          - metadata.name
