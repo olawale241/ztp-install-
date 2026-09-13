@@ -19,7 +19,7 @@ spec:
     spec:
       project: default
       source:
-        repoURL: https://github.com/olawale241/gitops.git
+        repoURL: https://github.com/olawale241/ztp-install-.git
         targetRevision: main
         path: '{{ .path.path }}'
       destination:
