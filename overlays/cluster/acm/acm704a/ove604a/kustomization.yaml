@@ -236,3 +236,159 @@ replacements:
           name: worker-2
         fieldPaths:
           - metadata.name
+
+replacements:
+
+  # =========================================================
+  # Replace base namespace "cluster" with "ove604a"
+  # =========================================================
+  - source:
+      kind: Namespace
+      name: ove604a
+      fieldPath: metadata.name
+
+    targets:
+      - select:
+          kind: AgentClusterInstall
+          name: cluster
+        fieldPaths:
+          - metadata.namespace
+
+      - select:
+          kind: ClusterDeployment
+          name: cluster
+        fieldPaths:
+          - metadata.namespace
+
+      - select:
+          kind: InfraEnv
+          name: cluster
+        fieldPaths:
+          - metadata.namespace
+
+      - select:
+          kind: KlusterletAddonConfig
+          name: cluster
+        fieldPaths:
+          - metadata.namespace
+
+      - select:
+          kind: ServiceAccount
+          name: provisioning-vault
+        fieldPaths:
+          - metadata.namespace
+
+      - select:
+          kind: VaultConnection
+          name: provisioning-vault
+        fieldPaths:
+          - metadata.namespace
+
+      - select:
+          kind: VaultAuth
+          name: provisioning-vault-auth
+        fieldPaths:
+          - metadata.namespace
+
+      - select:
+          kind: VaultStaticSecret
+          name: pull-secret
+        fieldPaths:
+          - metadata.namespace
+
+      - select:
+          kind: VaultStaticSecret
+          name: bmc-credentials
+        fieldPaths:
+          - metadata.namespace
+
+      - select:
+          kind: VaultStaticSecret
+          name: vault-bootstrap-credentials
+        fieldPaths:
+          - metadata.namespace
+
+      - select:
+          kind: ServiceAccount
+          name: vault-bootstrap
+        fieldPaths:
+          - metadata.namespace
+
+      - select:
+          kind: Role
+          name: vault-bootstrap
+        fieldPaths:
+          - metadata.namespace
+
+      - select:
+          kind: RoleBinding
+          name: vault-bootstrap
+        fieldPaths:
+          - metadata.namespace
+          - subjects.0.namespace
+
+      - select:
+          kind: ConfigMap
+          name: vault-bootstrap-script
+        fieldPaths:
+          - metadata.namespace
+
+      - select:
+          kind: Job
+          name: vault-bootstrap
+        fieldPaths:
+          - metadata.namespace
+
+      - select:
+          kind: BareMetalHost
+          name: master-0
+        fieldPaths:
+          - metadata.namespace
+
+      - select:
+          kind: BareMetalHost
+          name: master-1
+        fieldPaths:
+          - metadata.namespace
+
+      - select:
+          kind: BareMetalHost
+          name: master-2
+        fieldPaths:
+          - metadata.namespace
+
+      - select:
+          kind: BareMetalHost
+          name: worker-0
+        fieldPaths:
+          - metadata.namespace
+
+      - select:
+          kind: BareMetalHost
+          name: worker-1
+        fieldPaths:
+          - metadata.namespace
+
+      - select:
+          kind: BareMetalHost
+          name: worker-2
+        fieldPaths:
+          - metadata.namespace
+
+  # ---------------------------------------------------------
+  # KEEP YOUR EXISTING NAME REPLACEMENTS BELOW THIS
+  # ---------------------------------------------------------
+  - source:
+      kind: Namespace
+      name: ove604a
+      fieldPath: metadata.name
+    targets:
+      - select:
+          kind: AgentClusterInstall
+          name: cluster
+        fieldPaths:
+          - metadata.name
+
+      # ... existing entries continue
+
+
