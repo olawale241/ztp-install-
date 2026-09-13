@@ -14,7 +14,7 @@ spec:
   bootMode: UEFI
   bootMACAddress: "00:50:56:ab:c3:c7"
   bmc:
-    address: "redfish-virtualmedia://192.168.1.183:8000/redfish/v1/Systems/422bbe08-4149-0286-b95e-d29542fd7540"
+    address: "redfish-virtualmedia+http://192.168.1.183:8000/redfish/v1/Systems/422bbe08-4149-0286-b95e-d29542fd7540"
     credentialsName: bmc-credentials
     disableCertificateVerification: true
   automatedCleaningMode: disabled
