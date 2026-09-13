@@ -1,0 +1,15 @@
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: vault-bootstrap
+  namespace: cluster
+rules:
+  - apiGroups: ["extensions.hive.openshift.io"]
+    resources: ["agentclusterinstalls"]
+    verbs: ["get", "list", "watch"]
+  - apiGroups: [""]
+    resources: ["secrets"]
+    verbs: ["get", "list", "watch"]
+  - apiGroups: ["secrets.hashicorp.com"]
+    resources: ["vaultconnections"]
+    verbs: ["get", "list", "watch"]

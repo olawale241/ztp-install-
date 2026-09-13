@@ -1,0 +1,39 @@
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: vault-bootstrap
+  namespace: cluster
+  annotations:
+    argocd.argoproj.io/sync-options: Replace=true
+spec:
+  backoffLimit: 6
+  activeDeadlineSeconds: 21600
+  template:
+    metadata:
+      labels:
+        app: vault-bootstrap
+    spec:
+      serviceAccountName: vault-bootstrap
+      restartPolicy: OnFailure
+      containers:
+        - name: vault-bootstrap
+          image: registry.redhat.io/openshift4/ose-tools-rhel9:v4.20
+          env:
+            - name: CLUSTER_NAME
+              value: cluster
+            - name: VAULT_TOKEN
+              valueFrom:
+                secretKeyRef:
+                  name: vault-bootstrap-credentials
+                  key: VAULT_TOKEN
+          command:
+            - /bin/bash
+            - /opt/bootstrap/bootstrap.sh
+          volumeMounts:
+            - name: bootstrap-script
+              mountPath: /opt/bootstrap
+      volumes:
+        - name: bootstrap-script
+          configMap:
+            name: vault-bootstrap-script
+            defaultMode: 0755

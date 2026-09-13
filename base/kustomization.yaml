@@ -1,0 +1,26 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+resources:
+  - cluster/agentclusterinstall.yaml
+  - cluster/clusterdeployment.yaml
+  - cluster/infraenv.yaml
+  - cluster/managedcluster.yaml
+  - cluster/klusterletaddonconfig.yaml
+
+  # Hub Vault Secrets Operator resources: 3 VaultStaticSecrets are created here.
+  - secrets/provisioning-vault-connection.yaml
+  - secrets/provisioning-vault-auth.yaml
+  - secrets/provisioning-vault-secrets.yaml
+
+  - baremetalhosts/control-plane/master-0.yaml
+  - baremetalhosts/control-plane/master-1.yaml
+  - baremetalhosts/control-plane/master-2.yaml
+  - baremetalhosts/workers/worker-0.yaml
+  - baremetalhosts/workers/worker-1.yaml
+  - baremetalhosts/workers/worker-2.yaml
+
+  # Generates ConfigMap/day2-bootstrap on the Hub. ACI injects its files into the spoke.
+  - extra-manifests
+
+  # One-time Hub Job that creates the per-spoke Vault JWT mount/policy/role.
+  - vault-hub

@@ -1,0 +1,120 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: vault-bootstrap-script
+  namespace: cluster
+data:
+  bootstrap.sh: |
+    #!/bin/bash
+    set -euo pipefail
+
+    ACI_NAME="${CLUSTER_NAME}"
+    AUTH_MOUNT="jwt-${CLUSTER_NAME}"
+    VAULT_ROLE="${CLUSTER_NAME}-day2"
+    VAULT_POLICY="${CLUSTER_NAME}-day2"
+
+    # VAULT_ADDR is configuration, not a credential. Read the cluster-specific
+    # endpoint from the Hub VaultConnection instead of storing it in Vault.
+    VAULT_ADDR=""
+    echo "Waiting for VaultConnection/provisioning-vault..."
+    until [ -n "${VAULT_ADDR}" ]; do
+      VAULT_ADDR="$(oc get vaultconnection provisioning-vault -o jsonpath='{.spec.address}' 2>/dev/null || true)"
+      [ -n "${VAULT_ADDR}" ] || sleep 5
+    done
+    export VAULT_ADDR
+    echo "Vault endpoint: ${VAULT_ADDR}"
+
+    echo "Waiting for AgentClusterInstall ${ACI_NAME} to complete..."
+    while true; do
+      COMPLETED="$(oc get agentclusterinstall "${ACI_NAME}" -o jsonpath='{.status.conditions[?(@.type=="Completed")].status}' 2>/dev/null || true)"
+      FAILED="$(oc get agentclusterinstall "${ACI_NAME}" -o jsonpath='{.status.conditions[?(@.type=="Failed")].status}' 2>/dev/null || true)"
+
+      if [ "${COMPLETED}" = "True" ]; then
+        break
+      fi
+      if [ "${FAILED}" = "True" ]; then
+        echo "AgentClusterInstall ${ACI_NAME} failed; refusing to configure Vault." >&2
+        exit 1
+      fi
+      sleep 30
+    done
+
+    echo "Cluster install completed. Waiting for admin kubeconfig Secret..."
+    KUBECONFIG_SECRET=""
+    until [ -n "${KUBECONFIG_SECRET}" ]; do
+      KUBECONFIG_SECRET="$(oc get secret -o jsonpath='{range .items[*]}{.metadata.name}{"\n"}{end}' | grep -E 'admin-kubeconfig$' | head -1 || true)"
+      [ -n "${KUBECONFIG_SECRET}" ] || sleep 20
+    done
+
+    oc get secret "${KUBECONFIG_SECRET}" -o jsonpath='{.data.kubeconfig}' | base64 -d > /tmp/spoke-kubeconfig
+
+    API_URL="$(oc --kubeconfig=/tmp/spoke-kubeconfig config view --raw --minify -o jsonpath='{.clusters[0].cluster.server}')"
+    CA_DATA="$(oc --kubeconfig=/tmp/spoke-kubeconfig config view --raw --minify -o jsonpath='{.clusters[0].cluster.certificate-authority-data}')"
+    printf '%s' "${CA_DATA}" | base64 -d > /tmp/spoke-ca.pem
+
+    echo "Spoke API: ${API_URL}"
+    echo "Waiting for unauthenticated service-account JWKS discovery..."
+    until curl --silent --show-error --fail --cacert /tmp/spoke-ca.pem "${API_URL}/openid/v1/jwks" >/dev/null 2>&1; do
+      sleep 20
+    done
+
+    # Escape PEM newlines for the Vault JSON API payload.
+    JWKS_CA_JSON="$(awk '{printf "%s\\n", $0}' /tmp/spoke-ca.pem)"
+    JWKS_URL="${API_URL}/openid/v1/jwks"
+
+    vault_request() {
+      local method="$1"
+      local path="$2"
+      local data_file="${3:-}"
+      if [ -n "${data_file}" ]; then
+        curl -ksS --fail \
+          --header "X-Vault-Token: ${VAULT_TOKEN}" \
+          --header "Content-Type: application/json" \
+          --request "${method}" \
+          --data @"${data_file}" \
+          "${VAULT_ADDR}/v1/${path}"
+      else
+        curl -ksS --fail \
+          --header "X-Vault-Token: ${VAULT_TOKEN}" \
+          --request "${method}" \
+          "${VAULT_ADDR}/v1/${path}"
+      fi
+    }
+
+    echo "Ensuring dedicated Vault JWT auth mount ${AUTH_MOUNT} exists..."
+    if ! vault_request GET "sys/auth/${AUTH_MOUNT}" >/dev/null 2>&1; then
+      printf '{"type":"jwt","description":"JWT auth for OpenShift cluster %s"}\n' "${CLUSTER_NAME}" > /tmp/auth-mount.json
+      vault_request POST "sys/auth/${AUTH_MOUNT}" /tmp/auth-mount.json >/dev/null
+    fi
+
+    cat > /tmp/jwt-config.json <<EOF_CONFIG
+    {"jwks_url":"${JWKS_URL}","jwks_ca_pem":"${JWKS_CA_JSON}"}
+    EOF_CONFIG
+    vault_request POST "auth/${AUTH_MOUNT}/config" /tmp/jwt-config.json >/dev/null
+
+    cat > /tmp/policy.json <<EOF_POLICY
+    {
+      "policy": "path \"acm/data/${CLUSTER_NAME}/day2/*\" {\n  capabilities = [\"read\"]\n}\n"
+    }
+    EOF_POLICY
+    vault_request PUT "sys/policies/acl/${VAULT_POLICY}" /tmp/policy.json >/dev/null
+
+    cat > /tmp/role.json <<EOF_ROLE
+    {
+      "role_type": "jwt",
+      "user_claim": "sub",
+      "bound_subject": "system:serviceaccount:openshift-gitops:day2-vault",
+      "bound_audiences": ["vault"],
+      "policies": ["${VAULT_POLICY}"],
+      "ttl": "1h",
+      "max_ttl": "24h"
+    }
+    EOF_ROLE
+    vault_request POST "auth/${AUTH_MOUNT}/role/${VAULT_ROLE}" /tmp/role.json >/dev/null
+
+    echo "Vault bootstrap complete."
+    echo "  Cluster: ${CLUSTER_NAME}"
+    echo "  JWT mount: ${AUTH_MOUNT}"
+    echo "  Role: ${VAULT_ROLE}"
+    echo "  Policy: ${VAULT_POLICY}"
+    echo "  JWKS: ${JWKS_URL}"

@@ -1,0 +1,9 @@
+apiVersion: secrets.hashicorp.com/v1beta1
+kind: VaultConnection
+metadata:
+  name: provisioning-vault
+  namespace: ove604a
+spec:
+  # Cluster/environment-specific Vault endpoint reachable from the ACM Hub.
+  address: "http://192.168.1.123:8200"
+  skipTLSVerify: true

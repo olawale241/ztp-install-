@@ -1,0 +1,11 @@
+apiVersion: secrets.hashicorp.com/v1beta1
+kind: VaultAuth
+metadata:
+  name: provisioning-vault-auth
+  namespace: ove604a
+spec:
+  kubernetes:
+    role: ove604a-provisioning
+    serviceAccount: provisioning-vault
+    audiences:
+      - vault

@@ -1,0 +1,29 @@
+apiVersion: extensions.hive.openshift.io/v1beta1
+kind: AgentClusterInstall
+metadata:
+  name: cluster
+  namespace: cluster
+spec:
+  clusterDeploymentRef:
+    name: cluster
+
+  # This ConfigMap is created on the Hub from base/extra-manifests.
+  # Assisted Installer injects every file in the ConfigMap into the spoke.
+  manifestsConfigMapRefs:
+    - name: day2-bootstrap
+
+  imageSetRef:
+    name: openshift-4.21
+
+  networking:
+    clusterNetwork:
+      - cidr: 10.128.0.0/14
+        hostPrefix: 23
+    serviceNetwork:
+      - 172.30.0.0/16
+
+  provisionRequirements:
+    controlPlaneAgents: 3
+    workerAgents: 3
+
+  sshPublicKey: "<YOUR_SSH_PUBLIC_KEY>"

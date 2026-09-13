@@ -1,0 +1,13 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+configMapGenerator:
+  - name: day2-bootstrap
+    files:
+      - 00-namespace.yaml
+      - 09-gitops-operatorgroup.yaml
+      - 10-gitops-operator.yaml
+      - 11-vault-secrets-operator.yaml
+      - 12-day2-bootstrap-rbac.yaml
+      - 13-day2-bootstrap-job.yaml
+generatorOptions:
+  disableNameSuffixHash: true

@@ -1,0 +1,20 @@
+apiVersion: metal3.io/v1alpha1
+kind: BareMetalHost
+metadata:
+  name: ove604w2
+  namespace: ove604a
+  annotations:
+    inspect.metal3.io: disabled
+    bmac.agent-install.openshift.io/hostname: ove604w2
+    bmac.agent-install.openshift.io/role: worker
+  labels:
+    infraenvs.agent-install.openshift.io: ove604a
+spec:
+  online: true
+  bootMode: UEFI
+  bootMACAddress: "00:50:56:ab:b9:1a"
+  bmc:
+    address: "redfish-virtualmedia://192.168.1.183:8000/redfish/v1/Systems/422be68a-3dfd-4ae6-5139-e5a208beed9f"
+    credentialsName: bmc-credentials
+    disableCertificateVerification: true
+  automatedCleaningMode: disabled

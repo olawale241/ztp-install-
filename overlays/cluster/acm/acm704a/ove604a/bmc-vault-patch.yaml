@@ -1,0 +1,7 @@
+apiVersion: secrets.hashicorp.com/v1beta1
+kind: VaultStaticSecret
+metadata:
+  name: bmc-credentials
+  namespace: ove604a
+spec:
+  path: ove604a/bmc

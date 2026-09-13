@@ -1,0 +1,15 @@
+apiVersion: extensions.hive.openshift.io/v1beta1
+kind: AgentClusterInstall
+metadata:
+  name: ove604a
+  namespace: ove604a
+spec:
+  # HA networking: set apiVIP/ingressVIP (and machineNetwork if needed)
+  # unless this cluster uses user-managed networking/external load balancing.
+  # apiVIP: "CHANGE_ME_API_VIP"
+  # ingressVIP: "CHANGE_ME_INGRESS_VIP"
+  clusterDeploymentRef:
+    name: ove604a
+  manifestsConfigMapRefs:
+    - name: day2-bootstrap
+  sshPublicKey: "<YOUR_SSH_PUBLIC_KEY>"

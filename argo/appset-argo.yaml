@@ -1,0 +1,33 @@
+apiVersion: argoproj.io/v1alpha1
+kind: ApplicationSet
+metadata:
+  name: ztp-clusters
+  namespace: openshift-gitops
+spec:
+  goTemplate: true
+  goTemplateOptions:
+    - missingkey=error
+  generators:
+    - git:
+        repoURL: https://github.com/olawale241/gitops.git
+        revision: main
+        directories:
+          - path: ztp-install/overlays/cluster/acm/*/*
+  template:
+    metadata:
+      name: 'ztp-{{ .path.basename }}'
+    spec:
+      project: default
+      source:
+        repoURL: https://github.com/olawale241/gitops.git
+        targetRevision: main
+        path: '{{ .path.path }}'
+      destination:
+        server: https://kubernetes.default.svc
+        namespace: '{{ .path.basename }}'
+      syncPolicy:
+        automated:
+          prune: true
+          selfHeal: true
+        syncOptions:
+          - CreateNamespace=true

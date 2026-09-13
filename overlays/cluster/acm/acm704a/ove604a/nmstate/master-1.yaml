@@ -1,0 +1,23 @@
+apiVersion: agent-install.openshift.io/v1beta1
+kind: NMStateConfig
+metadata:
+  name: ove604m2-nmstate
+  namespace: ove604a
+  labels:
+    cluster: ove604a
+spec:
+  config:
+    interfaces:
+      - name: ens224
+        type: ethernet
+        state: up
+        mac-address: "CHANGE_ME_ENS224_MAC_OVE604M2"
+        ipv4:
+          enabled: true
+          dhcp: false
+          address:
+            - ip: 192.168.2.12
+              prefix-length: 24
+  interfaces:
+    - name: ens224
+      macAddress: "CHANGE_ME_ENS224_MAC_OVE604M2"

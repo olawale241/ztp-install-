@@ -1,0 +1,74 @@
+# Allow an external Vault JWT mount to retrieve the spoke's public JWKS.
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: vault-service-account-issuer-discovery
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: system:service-account-issuer-discovery
+subjects:
+  - kind: Group
+    apiGroup: rbac.authorization.k8s.io
+    name: system:unauthenticated
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: day2-bootstrap
+  namespace: openshift-gitops
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: day2-bootstrap
+  namespace: openshift-gitops
+rules:
+  - apiGroups: [""]
+    resources: ["serviceaccounts", "secrets"]
+    verbs: ["get", "list", "watch", "create", "update", "patch"]
+  - apiGroups: ["secrets.hashicorp.com"]
+    resources: ["vaultconnections", "vaultauths", "vaultstaticsecrets"]
+    verbs: ["get", "list", "watch", "create", "update", "patch"]
+  - apiGroups: ["argoproj.io"]
+    resources: ["applications"]
+    verbs: ["get", "list", "watch", "create", "update", "patch"]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: day2-bootstrap
+  namespace: openshift-gitops
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: Role
+  name: day2-bootstrap
+subjects:
+  - kind: ServiceAccount
+    name: day2-bootstrap
+    namespace: openshift-gitops
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: day2-bootstrap-discovery
+rules:
+  - apiGroups: ["apiextensions.k8s.io"]
+    resources: ["customresourcedefinitions"]
+    verbs: ["get", "list", "watch"]
+  - apiGroups: ["config.openshift.io"]
+    resources: ["infrastructures"]
+    verbs: ["get"]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: day2-bootstrap-discovery
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: day2-bootstrap-discovery
+subjects:
+  - kind: ServiceAccount
+    name: day2-bootstrap
+    namespace: openshift-gitops

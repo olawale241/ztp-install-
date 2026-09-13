@@ -1,0 +1,238 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+
+
+resources:
+  - ../../../../../base
+  - namespace.yaml
+  - nmstate/master-0.yaml
+  - nmstate/master-1.yaml
+  - nmstate/master-2.yaml
+  - nmstate/worker-0.yaml
+  - nmstate/worker-1.yaml
+  - nmstate/worker-2.yaml
+
+# Normal YAML manifest patches. No JSON6902/op: replace patches.
+patches:
+  # Cluster resources
+  - target:
+      kind: AgentClusterInstall
+      name: cluster
+    path: agentclusterinstall-patch.yaml
+
+  - target:
+      kind: ClusterDeployment
+      name: cluster
+    path: clusterdeployment-patch.yaml
+
+  - target:
+      kind: InfraEnv
+      name: cluster
+    path: infraenv-patch.yaml
+
+  - target:
+      kind: ManagedCluster
+      name: cluster
+    path: managedcluster-patch.yaml
+
+  - target:
+      kind: KlusterletAddonConfig
+      name: cluster
+    path: klusterletaddonconfig-patch.yaml
+
+  # Hub namespace-scoped resources that do not otherwise need cluster-specific data
+  - target:
+      kind: ServiceAccount
+      name: provisioning-vault
+    path: provisioning-vault-sa-patch.yaml
+
+  - target:
+      kind: VaultConnection
+      name: provisioning-vault
+    path: provisioning-vault-connection-patch.yaml
+
+  - target:
+      kind: ConfigMap
+      name: day2-bootstrap
+    path: day2-bootstrap-configmap-patch.yaml
+
+  - target:
+      kind: ServiceAccount
+      name: vault-bootstrap
+    path: vault-hub-sa-patch.yaml
+
+  - target:
+      kind: Role
+      name: vault-bootstrap
+    path: vault-hub-role-patch.yaml
+
+  - target:
+      kind: RoleBinding
+      name: vault-bootstrap
+    path: vault-hub-rolebinding-patch.yaml
+
+  - target:
+      kind: ConfigMap
+      name: vault-bootstrap-script
+    path: vault-hub-configmap-patch.yaml
+
+  # Hub Vault provisioning
+  - target:
+      kind: VaultAuth
+      name: provisioning-vault-auth
+    path: provisioning-vault-auth-patch.yaml
+
+  - target:
+      kind: VaultStaticSecret
+      name: pull-secret
+    path: pull-secret-vault-patch.yaml
+
+  - target:
+      kind: VaultStaticSecret
+      name: bmc-credentials
+    path: bmc-vault-patch.yaml
+
+  - target:
+      kind: VaultStaticSecret
+      name: vault-bootstrap-credentials
+    path: vault-bootstrap-secret-patch.yaml
+
+  - target:
+      kind: Job
+      name: vault-bootstrap
+    path: vault-hub-job-patch.yaml
+
+  # BareMetalHosts
+  - target:
+      kind: BareMetalHost
+      name: master-0
+    path: master-0-patch.yaml
+
+  - target:
+      kind: BareMetalHost
+      name: master-1
+    path: master-1-patch.yaml
+
+  - target:
+      kind: BareMetalHost
+      name: master-2
+    path: master-2-patch.yaml
+
+  - target:
+      kind: BareMetalHost
+      name: worker-0
+    path: worker-0-patch.yaml
+
+  - target:
+      kind: BareMetalHost
+      name: worker-1
+    path: worker-1-patch.yaml
+
+  - target:
+      kind: BareMetalHost
+      name: worker-2
+    path: worker-2-patch.yaml
+
+# OpenShift 4.20 oc embeds Kustomize 5.6.x. In that version, a YAML patch
+# selected with target does not rename metadata.name. Replacements below do
+# only the name substitutions while the patch files remain normal manifests.
+replacements:
+  # All cluster identity objects use the overlay Namespace name: ove604a.
+  - source:
+      kind: Namespace
+      name: ove604a
+      fieldPath: metadata.name
+    targets:
+      - select:
+          kind: AgentClusterInstall
+          name: cluster
+        fieldPaths:
+          - metadata.name
+      - select:
+          kind: ClusterDeployment
+          name: cluster
+        fieldPaths:
+          - metadata.name
+      - select:
+          kind: InfraEnv
+          name: cluster
+        fieldPaths:
+          - metadata.name
+      - select:
+          kind: ManagedCluster
+          name: cluster
+        fieldPaths:
+          - metadata.name
+      - select:
+          kind: KlusterletAddonConfig
+          name: cluster
+        fieldPaths:
+          - metadata.name
+
+  # Each BMH patch already sets the desired hostname annotation. Reuse that
+  # value as the Kubernetes object name so there is no second name variable.
+  - source:
+      kind: BareMetalHost
+      name: master-0
+      fieldPath: metadata.annotations.[bmac.agent-install.openshift.io/hostname]
+    targets:
+      - select:
+          kind: BareMetalHost
+          name: master-0
+        fieldPaths:
+          - metadata.name
+
+  - source:
+      kind: BareMetalHost
+      name: master-1
+      fieldPath: metadata.annotations.[bmac.agent-install.openshift.io/hostname]
+    targets:
+      - select:
+          kind: BareMetalHost
+          name: master-1
+        fieldPaths:
+          - metadata.name
+
+  - source:
+      kind: BareMetalHost
+      name: master-2
+      fieldPath: metadata.annotations.[bmac.agent-install.openshift.io/hostname]
+    targets:
+      - select:
+          kind: BareMetalHost
+          name: master-2
+        fieldPaths:
+          - metadata.name
+
+  - source:
+      kind: BareMetalHost
+      name: worker-0
+      fieldPath: metadata.annotations.[bmac.agent-install.openshift.io/hostname]
+    targets:
+      - select:
+          kind: BareMetalHost
+          name: worker-0
+        fieldPaths:
+          - metadata.name
+
+  - source:
+      kind: BareMetalHost
+      name: worker-1
+      fieldPath: metadata.annotations.[bmac.agent-install.openshift.io/hostname]
+    targets:
+      - select:
+          kind: BareMetalHost
+          name: worker-1
+        fieldPaths:
+          - metadata.name
+
+  - source:
+      kind: BareMetalHost
+      name: worker-2
+      fieldPath: metadata.annotations.[bmac.agent-install.openshift.io/hostname]
+    targets:
+      - select:
+          kind: BareMetalHost
+          name: worker-2
+        fieldPaths:
+          - metadata.name

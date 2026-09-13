@@ -1,0 +1,18 @@
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: vault-bootstrap
+  namespace: ove604a
+spec:
+  template:
+    spec:
+      containers:
+        - name: vault-bootstrap
+          env:
+            - name: CLUSTER_NAME
+              value: ove604a
+            - name: VAULT_TOKEN
+              valueFrom:
+                secretKeyRef:
+                  name: vault-bootstrap-credentials
+                  key: VAULT_TOKEN

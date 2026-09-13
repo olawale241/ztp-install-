@@ -1,0 +1,25 @@
+apiVersion: hive.openshift.io/v1
+kind: ClusterDeployment
+metadata:
+  name: cluster
+  namespace: cluster
+spec:
+  baseDomain: example.com
+
+  clusterInstallRef:
+    group: extensions.hive.openshift.io
+    kind: AgentClusterInstall
+    name: cluster
+    version: v1beta1
+
+  clusterName: cluster
+
+  controlPlaneConfig:
+    servingCertificates: {}
+
+  # InfraEnv.spec.clusterRef binds discovered Agents to this ClusterDeployment.
+  platform:
+    agentBareMetal: {}
+
+  pullSecretRef:
+    name: pull-secret

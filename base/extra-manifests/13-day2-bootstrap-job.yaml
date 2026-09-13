@@ -1,0 +1,147 @@
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: day2-bootstrap
+  namespace: openshift-gitops
+spec:
+  backoffLimit: 6
+  activeDeadlineSeconds: 21600
+  template:
+    spec:
+      serviceAccountName: day2-bootstrap
+      restartPolicy: OnFailure
+      containers:
+        - name: bootstrap
+          image: registry.redhat.io/openshift4/ose-cli-rhel9:v4.20
+          env:
+            - name: VAULT_ADDR
+              valueFrom:
+                configMapKeyRef:
+                  name: day2-site-config
+                  key: VAULT_ADDR
+            - name: VAULT_KV_MOUNT
+              value: acm
+            - name: DAY2_REPO_PATH_PREFIX
+              value: overlays
+          command:
+            - /bin/bash
+            - -c
+            - |
+              set -euo pipefail
+
+              echo "Waiting for Vault Secrets Operator and OpenShift GitOps CRDs..."
+              for crd in \
+                vaultconnections.secrets.hashicorp.com \
+                vaultauths.secrets.hashicorp.com \
+                vaultstaticsecrets.secrets.hashicorp.com \
+                applications.argoproj.io; do
+                until oc get crd "${crd}" >/dev/null 2>&1; do
+                  echo "Waiting for ${crd}..."
+                  sleep 20
+                done
+              done
+
+              API_URL="$(oc get infrastructure cluster -o jsonpath='{.status.apiServerURL}')"
+              CLUSTER_NAME="$(printf '%s' "${API_URL}" | sed -E 's#https?://api\.([^.]+)\..*#\1#')"
+
+              if [ -z "${CLUSTER_NAME}" ] || [ "${CLUSTER_NAME}" = "${API_URL}" ]; then
+                echo "Unable to derive cluster name from API URL: ${API_URL}" >&2
+                exit 1
+              fi
+
+              AUTH_MOUNT="jwt-${CLUSTER_NAME}"
+              VAULT_ROLE="${CLUSTER_NAME}-day2"
+
+              echo "Cluster: ${CLUSTER_NAME}"
+              echo "Vault auth mount: ${AUTH_MOUNT}"
+              echo "Vault role: ${VAULT_ROLE}"
+
+              cat <<MANIFEST | oc apply -f -
+              apiVersion: v1
+              kind: ServiceAccount
+              metadata:
+                name: day2-vault
+                namespace: openshift-gitops
+              ---
+              apiVersion: secrets.hashicorp.com/v1beta1
+              kind: VaultConnection
+              metadata:
+                name: day2-vault
+                namespace: openshift-gitops
+              spec:
+                address: ${VAULT_ADDR}
+                skipTLSVerify: true
+              ---
+              apiVersion: secrets.hashicorp.com/v1beta1
+              kind: VaultAuth
+              metadata:
+                name: day2-vault-auth
+                namespace: openshift-gitops
+              spec:
+                vaultConnectionRef: day2-vault
+                method: jwt
+                mount: ${AUTH_MOUNT}
+                jwt:
+                  role: ${VAULT_ROLE}
+                  serviceAccount: day2-vault
+                  audiences:
+                    - vault
+              ---
+              # 4/4 - SPOKE: Argo CD repository credentials
+              apiVersion: secrets.hashicorp.com/v1beta1
+              kind: VaultStaticSecret
+              metadata:
+                name: cluster-config-repository
+                namespace: openshift-gitops
+              spec:
+                vaultAuthRef: day2-vault-auth
+                mount: ${VAULT_KV_MOUNT}
+                type: kv-v2
+                path: ${CLUSTER_NAME}/day2/git
+                refreshAfter: 1h
+                destination:
+                  name: cluster-config-repository
+                  create: true
+                  overwrite: true
+                  type: Opaque
+                  labels:
+                    argocd.argoproj.io/secret-type: repository
+              MANIFEST
+
+              echo "Waiting for VaultStaticSecret to create the Argo CD repository Secret..."
+              until oc get secret cluster-config-repository -n openshift-gitops >/dev/null 2>&1; do
+                oc get vaultstaticsecret cluster-config-repository -n openshift-gitops || true
+                sleep 20
+              done
+
+              REPO_URL="$(oc get secret cluster-config-repository -n openshift-gitops -o jsonpath='{.data.url}' | base64 -d)"
+              if [ -z "${REPO_URL}" ]; then
+                echo "Vault secret ${VAULT_KV_MOUNT}/${CLUSTER_NAME}/day2/git must contain a 'url' key." >&2
+                exit 1
+              fi
+
+              DAY2_PATH="${DAY2_REPO_PATH_PREFIX}/${CLUSTER_NAME}"
+              cat <<MANIFEST | oc apply -f -
+              apiVersion: argoproj.io/v1alpha1
+              kind: Application
+              metadata:
+                name: ${CLUSTER_NAME}-cluster-config
+                namespace: openshift-gitops
+              spec:
+                project: default
+                source:
+                  repoURL: ${REPO_URL}
+                  targetRevision: main
+                  path: ${DAY2_PATH}
+                destination:
+                  server: https://kubernetes.default.svc
+                  namespace: openshift-gitops
+                syncPolicy:
+                  automated:
+                    prune: true
+                    selfHeal: true
+                  syncOptions:
+                    - CreateNamespace=true
+              MANIFEST
+
+              echo "Day-2 bootstrap complete for ${CLUSTER_NAME}."

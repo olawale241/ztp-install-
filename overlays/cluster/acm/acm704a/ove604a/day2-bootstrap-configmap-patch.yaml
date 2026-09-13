@@ -1,0 +1,17 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: day2-bootstrap
+  namespace: ove604a
+data:
+  # This extra manifest is injected into the new spoke with the rest of the
+  # day2-bootstrap bundle. Keep the Vault endpoint cluster/environment-specific
+  # here rather than hard-coding it in the reusable base Job.
+  08-day2-site-config.yaml: |
+    apiVersion: v1
+    kind: ConfigMap
+    metadata:
+      name: day2-site-config
+      namespace: openshift-gitops
+    data:
+      VAULT_ADDR: "http://192.168.1.123:8200"

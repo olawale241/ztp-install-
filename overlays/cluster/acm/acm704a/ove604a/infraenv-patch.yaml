@@ -1,0 +1,15 @@
+apiVersion: agent-install.openshift.io/v1beta1
+kind: InfraEnv
+metadata:
+  name: ove604a
+  namespace: ove604a
+spec:
+  clusterRef:
+    name: ove604a
+    namespace: ove604a
+  pullSecretRef:
+    name: pull-secret
+  sshAuthorizedKey: "<YOUR_SSH_PUBLIC_KEY>"
+  nmStateConfigLabelSelector:
+    matchLabels:
+      cluster: ove604a

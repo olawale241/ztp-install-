@@ -1,0 +1,13 @@
+apiVersion: cluster.open-cluster-management.io/v1
+kind: ManagedCluster
+metadata:
+  name: ove604a
+  labels:
+    name: ove604a
+    ztp: "true"
+    environment: lab
+    vendor: OpenShift
+    cluster.open-cluster-management.io/clusterset: default
+spec:
+  hubAcceptsClient: true
+  leaseDurationSeconds: 60
