@@ -12,7 +12,7 @@ spec:
         repoURL: https://github.com/olawale241/ztp-install-.git
         revision: main
         directories:
-          - path: overlays/cluster/acm/acm704/*
+          path: overlays/cluster/acm/acm704a/*
   template:
     metadata:
       name: 'ztp-{{ .path.basename }}'
