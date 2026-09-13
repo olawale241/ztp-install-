@@ -10,6 +10,8 @@ spec:
   # ingressVIP: "CHANGE_ME_INGRESS_VIP"
   clusterDeploymentRef:
     name: ove604a
+  imageSetRef:
+    name: img4.21.32-x86-64-appsub
   manifestsConfigMapRefs:
     - name: day2-bootstrap
-  sshPublicKey: "<YOUR_SSH_PUBLIC_KEY>"
+  sshPublicKey: "ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAABgQDMKWSJBcVL15fGF7JPSmQFSDpwNZjg4/DuDWSCq+vR4nzYbdoHkvRC/7FUSwR1NxEYTJ6G2LowJbE9RMhB7GwK+LN6JiMIy0DsH5Pcc6UqytZqRnvcmaOsX+Clf2/zk0g0LcrWT/k4iuvgZS9ProyZc59Y4UUXsIobgvOca/oCueHP/gAqJ8kktRLokjhYaXutmoo84iLCIJGTbHeQ1EhY6uVAyXXVfSLQEXZ9vv+U48nY7Qynyj53UUbCQEwzKcV9tUhGhbvvxMj/ZlTcZhUcG3vwCPqr8MyLQkcNqFC/uDJ8rlfiEDjtJ/gPyhLiGOHKijy73HLXDYJaJ3N3CPlAYBbfj8NQ6fjz0uT5J7bsWqVPT7MGY3K4d7J4coA3sytJM07vkK5FJmzmiVssGPzmjJXaPz2OwnP/RSWVjtGIHsX8IDxNZb3DhDt0p3RgpPFaZT9JKhxKbQwsW31JuMprv8Ere/3jdoWpTu1odKOi6UOB/1hQq7ROaK0V9hpVK1c= root@lab1.smoad.net"

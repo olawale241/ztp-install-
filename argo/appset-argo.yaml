@@ -9,10 +9,10 @@ spec:
     - missingkey=error
   generators:
     - git:
-        repoURL: https://github.com/olawale241/gitops.git
+        repoURL: https://github.com/olawale241/ztp-install-.git
         revision: main
         directories:
-          - path: ztp-install/overlays/cluster/acm/*/*
+          - path: overlays/cluster/acm/*/*
   template:
     metadata:
       name: 'ztp-{{ .path.basename }}'

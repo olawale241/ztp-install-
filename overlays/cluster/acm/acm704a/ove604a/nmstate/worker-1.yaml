@@ -11,7 +11,7 @@ spec:
       - name: ens224
         type: ethernet
         state: up
-        mac-address: "CHANGE_ME_ENS224_MAC_OVE604W2"
+        mac-address: "00:50:56:ab:d9:21"
         ipv4:
           enabled: true
           dhcp: false
@@ -20,4 +20,4 @@ spec:
               prefix-length: 24
   interfaces:
     - name: ens224
-      macAddress: "CHANGE_ME_ENS224_MAC_OVE604W2"
+      macAddress: "00:50:56:ab:d9:21"
